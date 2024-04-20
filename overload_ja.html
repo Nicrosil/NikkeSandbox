@@ -181,7 +181,7 @@
           data[pos][LOCK_POS] = store[pos][LOCK_POS] = OFF;
         } else if (isAssign(pos)) {
           data[pos][LOCK_POS] = store[pos][LOCK_POS] = ON;
-          used += getCost(2);
+          used += getCost(1);
         }
         view(OFF);
       }
