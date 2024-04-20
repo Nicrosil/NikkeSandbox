@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>装備改造シミュレーター</title>
+    <script type="text/javascript">
+      const LOCK_POS = 0;
+      const ASSIGN_POS = 1;
+      const EFFECT_POS = 2;
+      const PARAM_POS = 3;
+      const NAME_POS = 0;
+
+      const ASSIGN = [100, 50, 30];
+      const PARAM_U = [60, 35, 5];
+      const PARAM_L = [0, 20, 20, 20, 20, 20];
+
+      const INIT = -1;
+      const ON = 1;
+      const OFF = 2;
+
+      const EMPTY_NO = 0;
+      const DEFAULT_PARAM_NO = 11;
+
+      const NAMES_T = [
+        ["効果未所持", 0],
+        ["「有利コードダメージ増加」", 10, 9.541, 1.4015],
+        ["「命中率増加」", 12, 4.77, 0.7043],
+        ["「最大装弾数増加」", 12, 27.841, 4.109],
+        ["「攻撃力増加」", 10, 4.77, 0.7043],
+        ["「チャージダメージ増加」", 12, 4.77, 0.7043],
+        ["「チャージ速度増加」", 12, 1.983, 0.2937],
+        ["「クリティカル確率増加」", 12, 2.299, 0.341],
+        ["「クリティカルダメージ増加」", 10, 6.64, 0.98],
+        ["「防御力増加」", 12, 4.77, 0.7043],
+      ];
+
+      let trial = 0;
+      let used = 0;
+      let data  = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+      let store = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+      let smode = OFF;
+
+      function getValue(effectNo, parameterNo) {
+        let value = NAMES_T[effectNo][2];
+        let add = NAMES_T[effectNo][3];
+        return value + add * (parameterNo - 1);
+      }
+
+      function modification(fast,effect) {
+        if (effect) {
+          calcAssign();
+          calcEffect();
+        }
+        if (fast) {
+          calcParameter(INIT);
+          lottery(ON);
+        } else {
+          calcParameter(ON);
+          lottery(smode);
+        }
+      }
+
+      function lottery(mode) {
+        used += getCost(1);
+        trial++;
+        if (mode == ON)
+          exeApply(true, OFF);
+        else
+          view(ON);
+      }
+
+      function exeApply(enable,ctrl) {
+        if (enable)
+          arrayCopy(data, store);
+        else
+          arrayCopy(store, data);
+        view(ctrl);
+      }
+
+      function isLock(pos) {
+        return data[pos][LOCK_POS] == ON;
+      }
+
+      function isAssign(pos) {
+        return data[pos][ASSIGN_POS] == ON;
+      }
+
+      function calcAssign() {
+        for (let pos = 0; pos < data.length; pos++) {
+          if (!isLock(pos)) assign(pos, ASSIGN[pos] > random() ? ON : OFF);
+        }
+      }
+
+      function calcEffect() {
+        for (let pos = 0; pos < data.length; pos++) {
+          if (!isLock(pos)) effect(pos, isAssign(pos) ? newEffectNo() : EMPTY_NO);
+        }
+      }
+
+      function reset() {
+        trial = used = 0;
+        data =  [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+        store = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+        view(INIT);
+      }
+
+      function isRetry(effectNo) {
+        for (let pos = 0; pos < data.length; pos++) {
+          if (data[pos][EFFECT_POS] == effectNo) return true;
+        }
+        return false;
+      }
+
+      function calcParameter(mode) {
+        for (let pos = 0; pos < data.length; pos++) {
+          if (!isLock(pos)) {
+            parameter(pos, isAssign(pos) ? newParameterNo(mode) : EMPTY_NO);
+          }
+        }
+      }
+
+      function newParameterNo(mode) {
+        if (mode == INIT) {
+          return DEFAULT_PARAM_NO;
+        } else {
+          return newPosition(PARAM_U) * 5 + newPosition(PARAM_L);
+        }
+      }
+
+      function newPosition(ary) {
+        let rnd = random();
+        let value = 0;
+        for (let i = 0; i < ary.length; i++) {
+          value += ary[i];
+          if (value > rnd) return i;
+        }
+        return -1;
+      }
+
+      function newEffectNo() {
+        let effectNo;
+        do {
+          let rnd = random();
+          let value = 0;
+          for (let pos = 0; pos < NAMES_T.length; pos++) {
+            value += NAMES_T[pos][1];
+            if (value > rnd) {
+              effectNo = pos;
+              break;
+            }
+          }
+        } while (isRetry(effectNo));
+        return effectNo;
+      }
+
+      function random() {
+        return Math.floor(Math.random() * 100);
+      }
+
+      function parameter(pos, value) {
+        data[pos][PARAM_POS] = value;
+      }
+
+      function effect(pos, value) {
+        data[pos][EFFECT_POS] = value;
+      }
+
+      function assign(pos, value) {
+        data[pos][ASSIGN_POS] = value;
+      }
+
+      function getCost(add) {
+          let cost = 0;
+          cost += isLock(0) ? 1 : 0;
+          cost += isLock(1) ? 1 : 0;
+          cost += isLock(2) ? 1 : 0;
+          return cost + add;
+      }
+
+      function lock(pos) {
+        if (isLock(pos)) {
+          data[pos][LOCK_POS] = store[pos][LOCK_POS] = OFF;
+        } else if (isAssign(pos)) {
+          data[pos][LOCK_POS] = store[pos][LOCK_POS] = ON;
+          used += getCost(2);
+        }
+        view(OFF);
+      }
+
+      function simple() {
+        smode = (smode == ON) ? OFF : ON;
+      }
+
+      function visibleControl(id, value) {
+        document.getElementById(id).style.display = (value) ? "inline" : "none";
+      }
+
+      function arrayCopy(from, to) {
+        for (let i = 0; i < from.length; i++) {
+          for (let j = 0; j < from[i].length; j++) {
+            to[i][j] = from[i][j];
+          }
+        }
+      }
+
+      function view(ctrl) {
+        visibleControl("btnRemodel", ctrl == INIT);
+        visibleControl("btnEffects", ctrl == OFF);
+        visibleControl("btnParameters", ctrl == OFF);
+        visibleControl("btnLoad", ctrl == ON);
+        visibleControl("btnSave", ctrl == ON);
+
+        visibleControl("viewStore", ctrl == ON);
+
+        for (let pos = 0; pos < data.length; pos++) {
+          let effectNo = data[pos][EFFECT_POS];
+          let result = NAMES_T[effectNo][NAME_POS];
+          let parameterNo = "";
+          if (effectNo != EMPTY_NO) {
+            parameterNo = data[pos][PARAM_POS];
+            result += " " + getValue(effectNo, parameterNo).toFixed(2) + "%";
+          }
+          document.getElementById("DE" + pos).value = result;
+          document.getElementById("DP" + pos).value = parameterNo;
+          document.getElementById("DL" + pos).checked = isLock(pos);
+        }
+
+        for (let pos = 0; pos < store.length; pos++) {
+          let effectNo = store[pos][EFFECT_POS];
+          let result = NAMES_T[effectNo][NAME_POS];
+          let parameterNo = "";
+          if (effectNo != EMPTY_NO) {
+            parameterNo = store[pos][PARAM_POS];
+            result += " " + getValue(effectNo, parameterNo).toFixed(2) + "%";
+          }
+          document.getElementById("SE" + pos).value = result;
+          document.getElementById("SP" + pos).value = parameterNo;
+        }
+        document.getElementById("result").innerHTML = "試行回数：" + trial + "、使用カスタムモジュール：" + used;
+      }
+    </script>
+    <style type="text/css">
+      .effect {
+        text-align: center;
+        width: 280px;
+        height: 16px;
+      }
+      .parameter {
+        text-align: center;
+        width: 20px;
+        height: 16px;
+      }
+      table {
+        font-size: 12px;
+        border-collapse: collapse;
+      }
+      th {
+        background-color: aliceblue;
+      }
+      th.rowtitle {
+        text-align: left;
+      }
+      td {
+        text-align: right;
+      }
+      td.initial {
+        background-color: gold;
+      }
+    </style>
+  </head>
+  <body onload="view(INIT);">
+    <h1>装備改造シミュレーター</h1>
+    <div id="viewData">
+      <div>
+        <input id="DE0" type="text" readonly="readonly" class="effect" />
+        <input id="DP0" type="text" readonly="readonly" class="parameter" />
+        <input id="DL0" type="checkbox" onclick="lock(0)" />効果獲得確率： 100%
+      </div>
+      <div>
+        <input id="DE1" type="text" readonly="readonly" class="effect"  />
+        <input id="DP1" type="text" readonly="readonly" class="parameter" />
+        <input id="DL1" type="checkbox" onclick="lock(1)" />効果獲得確率： 50%
+      </div>
+      <div>
+        <input id="DE2" type="text" readonly="readonly" class="effect" />
+        <input id="DP2" type="text" readonly="readonly" class="parameter" />
+        <input id="DL2" type="checkbox" onclick="lock(2)" />効果獲得確率： 30%
+      </div>
+    </div>
+    <div id="viewStore">
+      <div>&nbsp;↓&nbsp;</div>
+      <div>
+        <input id="SE0" type="text" readonly="readonly" class="effect"  />
+        <input id="SP0" type="text" readonly="readonly" class="parameter" />
+      </div>
+      <div>
+        <input id="SE1" type="text" readonly="readonly" class="effect" />
+        <input id="SP1" type="text" readonly="readonly" class="parameter" />
+      </div>
+      <div>
+        <input id="SE2" type="text" readonly="readonly" class="effect" />
+        <input id="SP2" type="text" readonly="readonly" class="parameter" />
+      </div>
+    </div>
+    <div>
+      <input id="btnRemodel" type="button" onclick="modification(true,true)" value="装備の改造" />
+      <input id="btnEffects" type="button" onclick="modification(false,true)" value="効果変更" />
+      <input id="btnParameters" type="button" onclick="modification(false,false)" value="数値再設定" />
+      <input id="btnLoad" type="button" onclick="exeApply(false,OFF)" value="効果維持" />
+      <input id="btnSave" type="button" onclick="exeApply(true,OFF)" value="効果変更" />
+    </div>
+    <hr />
+    <div>
+      <input id="cobSimple" type="checkbox" onclick="simple()" /><label for="cobSimple">簡易モード</label>
+      <input id="btnClear" type="button" onclick="reset()" value="初期化" />
+      <span id="result"></span>
+    </div>
+    <hr />
+    <h2>効果リスト</h2>
+    <table border="1">
+      <tr><th rowspan="3">効果</th><th>段階</th>
+        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+        <th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
+        <th>11</th><th>12</th><th>13</th><th>14</th><th>15</th>
+      </tr>
+      <tr><th rowspan="2">確率</th><th colspan="5">60%</th>
+        <th colspan="5">35%</th><th colspan="5">5%</th>
+      </tr>
+      <tr><th>12%</th><th>12%</th><th>12%</th><th>12%</th><th>12%</th>
+        <th>7%</th><th>7%</th><th>7%</th><th>7%</th><th>7%</th>
+        <th>1%</th><th>1%</th><th>1%</th><th>1%</th><th>1%</th>
+      </tr>
+      <tr><th class="rowtitle">「有利コードダメージ増加」</th><th>10%</th>
+        <td>9.54%</td><td>10.94%</td><td>12.34%</td><td>13.75%</td><td>15.15%</td>
+        <td>16.55%</td><td>17.95%</td><td>19.35%</td><td>20.75%</td><td>22.15%</td>
+        <td class="initial">23.56%</td><td>24.96%</td><td>26.36%</td><td>27.76%</td><td>29.16%</td>
+      </tr>
+      <tr><th class="rowtitle">「命中率増加」</th><th>12%</th>
+        <td>4.77%</td><td>5.47%</td><td>6.18%</td><td>6.88%</td><td>7.59%</td>
+        <td>8.29%</td><td>9.00%</td><td>9.70%</td><td>10.40%</td><td>11.11%</td>
+        <td class="initial">11.81%</td><td>12.52%</td><td>13.22%</td><td>13.93%</td><td>14.63%</td>
+      </tr>
+      <tr><th class="rowtitle">「最大装弾数増加」</th><th>12%</th>
+        <td>27.84%</td><td>31.95%</td><td>36.06%</td><td>40.17%</td><td>44.28%</td>
+        <td>48.39%</td><td>52.50%</td><td>56.60%</td><td>60.71%</td><td>64.82%</td>
+        <td class="initial">68.93%</td><td>73.04%</td><td>77.15%</td><td>81.26%</td><td>85.37%</td>
+      </tr>
+      <tr><th class="rowtitle">「攻撃力増加」</th><th>10%</th>
+        <td>4.77%</td><td>5.47%</td><td>6.18%</td><td>6.88%</td><td>7.59%</td>
+        <td>8.29%</td><td>9.00%</td><td>9.70%</td><td>10.40%</td><td>11.11%</td>
+        <td class="initial">11.81%</td><td>12.52%</td><td>13.22%</td><td>13.93%</td><td>14.63%</td>
+      </tr>
+      <tr><th class="rowtitle">「チャージダメージ増加」</th><th>12%</th>
+        <td>4.77%</td><td>5.47%</td><td>6.18%</td><td>6.88%</td><td>7.59%</td>
+        <td>8.29%</td><td>9.00%</td><td>9.70%</td><td>10.40%</td><td>11.11%</td>
+        <td class="initial">11.81%</td><td>12.52%</td><td>13.22%</td><td>13.93%</td><td>14.63%</td>
+      </tr>
+      <tr><th class="rowtitle">「チャージ速度増加」</th><th>12%</th>
+        <td>1.98%</td><td>2.28%</td><td>2.57%</td><td>2.86%</td><td>3.16%</td>
+        <td>3.45%</td><td>3.75%</td><td>4.04%</td><td>4.33%</td><td>4.63%</td>
+        <td class="initial">4.92%</td><td>5.21%</td><td>5.51%</td><td>5.80%</td><td>6.09%</td>
+      </tr>
+      <tr><th class="rowtitle">「クリティカル確率増加」</th><th>12%</th>
+        <td>2.30%</td><td>2.64%</td><td>2.98%</td><td>3.32%</td><td>3.66%</td>
+        <td>4.00%</td><td>4.35%</td><td>4.69%</td><td>5.03%</td><td>5.37%</td>
+        <td class="initial">5.71%</td><td>6.05%</td><td>6.39%</td><td>6.73%</td><td>7.07%</td>
+      </tr>
+      <tr><th class="rowtitle">「クリティカルダメージ増加」</th><th>10%</th>
+        <td>6.64%</td><td>7.62%</td><td>8.60%</td><td>9.58%</td><td>10.56%</td>
+        <td>11.54%</td><td>12.52%</td><td>13.50%</td><td>14.48%</td><td>15.46%</td>
+        <td class="initial">16.44%</td><td>17.42%</td><td>18.40%</td><td>19.38%</td><td>20.36%</td>
+      </tr>
+      <tr><th class="rowtitle">「防御力増加」</th><th>10%</th>
+        <td>4.77%</td><td>5.47%</td><td>6.18%</td><td>6.88%</td><td>7.59%</td>
+        <td>8.29%</td><td>9.00%</td><td>9.70%</td><td>10.40%</td><td>11.11%</td>
+        <td class="initial">11.81%</td><td>12.52%</td><td>13.22%</td><td>13.93%</td><td>14.63%</td>
+      </tr>
+    </table>
+  </body>
+</html>
