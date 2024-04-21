@@ -38,6 +38,7 @@
       let data  = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
       let store = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
       let smode = OFF;
+      let disp = INIT;
 
       function getValue(effectNo, parameterNo) {
         let value = NAMES_T[effectNo][2];
@@ -183,7 +184,7 @@
           data[pos][LOCK_POS] = store[pos][LOCK_POS] = ON;
           used += getCost(1);
         }
-        view(OFF);
+        view(disp);
       }
 
       function simple() {
@@ -210,7 +211,6 @@
         visibleControl("btnSave", ctrl == ON);
 
         visibleControl("viewStore", ctrl == ON);
-
         for (let pos = 0; pos < data.length; pos++) {
           let effectNo = data[pos][EFFECT_POS];
           let result = NAMES_T[effectNo][NAME_POS];
@@ -236,6 +236,7 @@
           document.getElementById("SP" + pos).value = parameterNo;
         }
         document.getElementById("result").innerHTML = "試行回数：" + trial + "、使用カスタムモジュール：" + used;
+        disp = ctrl;
       }
     </script>
     <style type="text/css">
@@ -269,25 +270,7 @@
   </head>
   <body onload="view(INIT);">
     <h1>装備改造シミュレーター</h1>
-    <div id="viewData">
-      <div>
-        <input id="DE0" type="text" readonly="readonly" class="effect" />
-        <input id="DP0" type="text" readonly="readonly" class="parameter" />
-        <input id="DL0" type="checkbox" onclick="lock(0)" />効果獲得確率： 100%
-      </div>
-      <div>
-        <input id="DE1" type="text" readonly="readonly" class="effect"  />
-        <input id="DP1" type="text" readonly="readonly" class="parameter" />
-        <input id="DL1" type="checkbox" onclick="lock(1)" />効果獲得確率： 50%
-      </div>
-      <div>
-        <input id="DE2" type="text" readonly="readonly" class="effect" />
-        <input id="DP2" type="text" readonly="readonly" class="parameter" />
-        <input id="DL2" type="checkbox" onclick="lock(2)" />効果獲得確率： 30%
-      </div>
-    </div>
     <div id="viewStore">
-      <div>&nbsp;↓&nbsp;</div>
       <div>
         <input id="SE0" type="text" readonly="readonly" class="effect"  />
         <input id="SP0" type="text" readonly="readonly" class="parameter" />
@@ -300,6 +283,24 @@
         <input id="SE2" type="text" readonly="readonly" class="effect" />
         <input id="SP2" type="text" readonly="readonly" class="parameter" />
       </div>
+      <div>&nbsp;↓&nbsp;</div>
+    </div>
+    <div id="viewData">
+      <div>
+        <input id="DE0" type="text" readonly="readonly" class="effect" />
+        <input id="DP0" type="text" readonly="readonly" class="parameter" />
+        <input id="DL0" type="checkbox" onclick="lock(0)" title="ロック" />
+      </div>
+      <div>
+        <input id="DE1" type="text" readonly="readonly" class="effect"  />
+        <input id="DP1" type="text" readonly="readonly" class="parameter" />
+        <input id="DL1" type="checkbox" onclick="lock(1)" title="ロック" />
+      </div>
+      <div>
+        <input id="DE2" type="text" readonly="readonly" class="effect" />
+        <input id="DP2" type="text" readonly="readonly" class="parameter" />
+        <input id="DL2" type="checkbox" onclick="lock(2)" title="ロック" />
+      </div>
     </div>
     <div>
       <input id="btnRemodel" type="button" onclick="modification(true,true)" value="装備の改造" />
@@ -310,12 +311,13 @@
     </div>
     <hr />
     <div>
-      <input id="cobSimple" type="checkbox" onclick="simple()" /><label for="cobSimple">簡易モード</label>
       <input id="btnClear" type="button" onclick="reset()" value="初期化" />
+      <input id="cobSimple" type="checkbox" onclick="simple()" /><label for="cobSimple">簡易モード</label><br />
       <span id="result"></span>
     </div>
     <hr />
-    <h2>効果リスト</h2>
+    <h2>確率情報</h2>
+    <p>１番スロット確率： 100%<br />２番スロット確率： 50%<br />３番スロット確率： 30%</p>
     <table border="1">
       <tr><th rowspan="3">効果</th><th>段階</th>
         <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
